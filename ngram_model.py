@@ -36,7 +36,7 @@ def train_ngrams(dataset):
             curr, prev, prevprev = seq[i], seq[i - 1], seq[i - 2]
             if (curr, prev, prevprev) not in trigram_counts:
                 trigram_counts[(curr, prev, prevprev)] = 0
-            trigram_counts[(curr, prev, prevprev)] = 1
+            trigram_counts[(curr, prev, prevprev)] += 1
 
             if (curr, prev) not in bigram_counts:
                 bigram_counts[(curr, prev)] = 0
@@ -44,8 +44,9 @@ def train_ngrams(dataset):
 
             if curr not in unigram_counts:
                 unigram_counts[curr] = 0
-                token_count += 1
             unigram_counts[curr] += 1
+
+    token_count += sum(unigram_counts.values())
 
     return trigram_counts, bigram_counts, unigram_counts, token_count
 
@@ -57,36 +58,43 @@ def evaluate_ngrams(eval_dataset, trigram_counts, bigram_counts, unigram_counts,
     """
     perplexity = 0
     l = 0
-    lambda3 = 1 - lambda1 - lambda2
+    lambda3 = 1. - lambda1 - lambda2
     for seq in eval_dataset:
-        tri_prob = 1
-        bi_prob = 1
-        uni_prob = 1
         for i in range(2, len(seq)):
             curr, prev, prevprev = seq[i], seq[i - 1], seq[i - 2]
-            if (prev, prevprev) in bigram_counts and (curr, prev, prevprev) in trigram_counts:
-                tri_prob *= (trigram_counts[(curr, prev, prevprev)] / bigram_counts[(prev, prevprev)])
+            if ((prev, prevprev) in bigram_counts) and ((curr, prev, prevprev) in trigram_counts):
+                tri_prob = float(trigram_counts[(curr, prev, prevprev)]) / bigram_counts[(prev, prevprev)]
             else:
                 tri_prob = 0
 
-            if (curr, prev) in bigram_counts and prev in unigram_counts:
-                bi_prob *= (bigram_counts[(curr, prev)] / unigram_counts[prev])
+            if ((curr, prev) in bigram_counts) and (prev in unigram_counts):
+                bi_prob = float(bigram_counts[(curr, prev)]) / unigram_counts[prev]
             else:
                 bi_prob = 0
 
             if curr in unigram_counts:
-                uni_prob *= (unigram_counts[curr] / train_token_count)
+                uni_prob = float(unigram_counts[curr]) / train_token_count
             else:
                 uni_prob = 0
 
-        if tri_prob != 0 or bi_prob != 0 or uni_prob != 0:
-            l += np.log2(lambda1 * tri_prob + lambda2 * bi_prob + lambda3 * uni_prob)
+            p_seq = (lambda1 * tri_prob) + (lambda2 * bi_prob) + (lambda3 * uni_prob)
+            l += np.log2(p_seq)
 
-    l = float(l) / len(eval_dataset)
+    l = float(l) / train_token_count
+    print l
     perplexity += 2 ** (-l)
 
     return perplexity
 
+def grid_search_lambdas(trigram_counts, bigram_counts, unigram_counts, token_count):
+    perplexities = np.zeros(shape=(100,100))
+    for i,lambda1 in enumerate(np.arange(0,1,0.01)):
+        for j,lambda2 in enumerate(np.arange(0,1,0.01)):
+            perplexities[i][j] = evaluate_ngrams(
+                S_dev, trigram_counts, bigram_counts, unigram_counts, token_count, lambda1, lambda2)
+
+    min_i, min_j = np.unravel_index(perplexities.argmin(), perplexities.shape)
+    return "min lambda1: "+np.arange(0,1,0.01)[min_i]+" min lambda2: "+np.arange(0,1,0.01)[min_j]
 
 def test_ngram():
     """
@@ -98,7 +106,9 @@ def test_ngram():
     print "#bigrams: " + str(len(bigram_counts))
     print "#unigrams: " + str(len(unigram_counts))
     print "#tokens: " + str(token_count)
+    # perplexity = evaluate_ngrams(S_dev, trigram_counts, bigram_counts, unigram_counts, token_count, 0.5, 0.4)
     perplexity = evaluate_ngrams(S_dev, trigram_counts, bigram_counts, unigram_counts, token_count, 0.5, 0.4)
+    # grid_search_lambdas()
     print "#perplexity: " + str(perplexity)
     ### YOUR CODE HERE
     ### END YOUR CODE

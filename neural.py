@@ -27,9 +27,11 @@ def forward(data, label, params, dimensions):
     b2 = np.reshape(params[ofs:ofs + Dy], (1, Dy))
 
     # Compute the probability
-    ### YOUR CODE HERE: forward propagation
-    raise NotImplementedError
-    ### END YOUR CODE
+
+    h = sigmoid(np.dot(data, W1) + b1)
+    y_hat = softmax(np.dot(h, W2) + b2)
+
+    return y_hat[label]
 
 def forward_backward_prop(data, labels, params, dimensions):
     """
@@ -60,10 +62,12 @@ def forward_backward_prop(data, labels, params, dimensions):
 
     ### YOUR CODE HERE: forward propagation
     raise NotImplementedError
+    # For all examples, we calculate accumulated errors (the cost is actually the sum of -log(forward...)
     ### END YOUR CODE
 
     ### YOUR CODE HERE: backward propagation
     raise NotImplementedError
+    # for each layer, accumulate the gradients w.r.t Weights or bias vectors. begin with W2 and b2 and then calc W1, b1
     ### END YOUR CODE
 
     ### Stack gradients (do not modify)
@@ -103,7 +107,7 @@ def your_sanity_checks():
     """
     print "Running your sanity checks..."
     ### YOUR CODE HERE
-    raise NotImplementedError
+
     ### END YOUR CODE
 
 
