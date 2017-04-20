@@ -21,6 +21,35 @@ docs_dev = du.load_dataset('data/lm/ptb-dev.txt')
 S_dev = du.docs_to_indices(docs_dev, word_to_num)
 
 
+def train_ngrams_avi_idan(dataset):
+    """
+        Gets an array of arrays of indexes, each one corresponds to a word.
+        Returns trigram, bigram, unigram and total counts.
+    """
+    trigram_counts = dict()
+    bigram_counts = dict()
+    unigram_counts = dict()
+    token_count = 0
+    ### YOUR CODE HERE
+    for sentence in dataset:
+        older = last = None
+
+        for current in sentence:
+            if current == 3 and last == 920 and older == 0:
+                print "xxxxx"
+            unigram_counts[current] = unigram_counts.get(current, 0) + 1
+            if last:
+                bigram_counts[(last, current)] = bigram_counts.get((last, current), 0) + 1
+            if older:
+                trigram_counts[(older, last, current)] = trigram_counts.get((older, last, current), 0) + 1
+
+            token_count += 1
+            older = last
+            last = current
+
+    ### END YOUR CODE
+    return trigram_counts, bigram_counts, unigram_counts, token_count
+
 def train_ngrams(dataset):
     """
         Gets an array of arrays of indexes, each one corresponds to a word.
@@ -32,19 +61,40 @@ def train_ngrams(dataset):
     token_count = 0
 
     for seq in dataset:
+        curr, prev = seq[1], seq[0]
+        bigram_counts[(curr, prev)] = bigram_counts.get((curr, prev), 0) + 1
+        # if (curr, prev) not in bigram_counts:
+        #     bigram_counts[(curr, prev)] = 0
+        # bigram_counts[(curr, prev)] += 1
+
+        # if curr not in unigram_counts:
+        #     unigram_counts[curr] = 0
+        # unigram_counts[curr] += 1
+        unigram_counts[curr] = unigram_counts.get(curr, 0) + 1
+
+        # if prev not in unigram_counts:
+        #     unigram_counts[prev] = 0
+        # unigram_counts[prev] += 1
+        unigram_counts[prev] = unigram_counts.get(prev, 0) + 1
+
         for i in range(2, len(seq)):
+            if curr == 3 and prev == 920 and prevprev == 0:
+                print "xxxxx"
             curr, prev, prevprev = seq[i], seq[i - 1], seq[i - 2]
-            if (curr, prev, prevprev) not in trigram_counts:
-                trigram_counts[(curr, prev, prevprev)] = 0
-            trigram_counts[(curr, prev, prevprev)] += 1
+            # if (curr, prev, prevprev) not in trigram_counts:
+            #     trigram_counts[(curr, prev, prevprev)] = 0
+            # trigram_counts[(curr, prev, prevprev)] += 1
+            trigram_counts[(curr, prev, prevprev)] = trigram_counts.get((curr, prev, prevprev), 0) + 1
 
-            if (curr, prev) not in bigram_counts:
-                bigram_counts[(curr, prev)] = 0
-            bigram_counts[(curr, prev)] += 1
+            # if (curr, prev) not in bigram_counts:
+            #     bigram_counts[(curr, prev)] = 0
+            # bigram_counts[(curr, prev)] += 1
+            bigram_counts[(curr, prev)] =bigram_counts.get((curr, prev), 0) + 1
 
-            if curr not in unigram_counts:
-                unigram_counts[curr] = 0
-            unigram_counts[curr] += 1
+            # if curr not in unigram_counts:
+            #     unigram_counts[curr] = 0
+            # unigram_counts[curr] += 1
+            unigram_counts[curr] = unigram_counts.get(curr, 0) + 1
 
     token_count += sum(unigram_counts.values())
 
@@ -86,6 +136,44 @@ def evaluate_ngrams(eval_dataset, trigram_counts, bigram_counts, unigram_counts,
 
     return perplexity
 
+def evaluate_ngrams_avi_idan(eval_dataset, trigram_counts, bigram_counts, unigram_counts, train_token_count, lambda1, lambda2):
+    """
+    Goes over an evaluation dataset and computes the perplexity for it with
+    the current counts and a linear interpolation
+    """
+    perplexity = 0
+    ### YOUR CODE HERE
+    sum_of_probs = 0
+    test_token_count = 0
+    for sentence in eval_dataset:
+        older = last = None
+
+        for current in sentence:
+            # calculating the probability
+            unigram_prob = float(unigram_counts.get(current, 0)) / train_token_count
+            if last and last in unigram_counts:
+                bigram_prob = float(bigram_counts.get((last, current), 0)) / unigram_counts[last]
+            else:
+                bigram_prob = 0
+            if older and (older, last) in bigram_counts:
+                trigram_prob = float(trigram_counts.get((older, last, current), 0)) / bigram_counts[(older, last)]
+            else:
+                trigram_prob = 0
+
+            # calculating the linear interpolation
+            prob = lambda1 * trigram_prob + lambda2 * bigram_prob + (1 - lambda1 - lambda2) * unigram_prob
+            if prob <= 0:
+                return float('Inf')
+            sum_of_probs -= np.log2(prob)
+
+            test_token_count += 1
+            older = last
+            last = current
+
+    perplexity = 2 ** (sum_of_probs / test_token_count)
+    ### END YOUR CODE
+    return perplexity
+
 def grid_search_lambdas(trigram_counts, bigram_counts, unigram_counts, token_count):
     perplexities = np.zeros(shape=(100,100))
     for i,lambda1 in enumerate(np.arange(0,1,0.01)):
@@ -108,7 +196,7 @@ def test_ngram():
     print "#tokens: " + str(token_count)
     # perplexity = evaluate_ngrams(S_dev, trigram_counts, bigram_counts, unigram_counts, token_count, 0.5, 0.4)
     perplexity = evaluate_ngrams(S_dev, trigram_counts, bigram_counts, unigram_counts, token_count, 0.5, 0.4)
-    # grid_search_lambdas()
+    # grid_search_lambdas(trigram_counts, bigram_counts, unigram_counts, token_count)
     print "#perplexity: " + str(perplexity)
     ### YOUR CODE HERE
     ### END YOUR CODE
