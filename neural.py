@@ -60,14 +60,30 @@ def forward_backward_prop(data, labels, params, dimensions):
     ofs += H * Dy
     b2 = np.reshape(params[ofs:ofs + Dy], (1, Dy))
 
+    gradW1 = np.zeros(shape = (len(data), Dy, H)) #todo: shape = M x Dy x H ?
+    gradW2 = np.zeros(shape = (len(data), H, Dx))
+    gradb1 = np.zeros(shape = (len(data), Dy, 1))
+    gradb2 = np.zeros(shape = (len(data), Dy, 1))
+
+
+    for i in range(len(data)):
+        x, y = data[i], labels[i]
     ### YOUR CODE HERE: forward propagation
-    raise NotImplementedError
     # For all examples, we calculate accumulated errors (the cost is actually the sum of -log(forward...)
+        error = -np.log(forward(x, y, params, dimensions))
     ### END YOUR CODE
 
     ### YOUR CODE HERE: backward propagation
-    raise NotImplementedError
     # for each layer, accumulate the gradients w.r.t Weights or bias vectors. begin with W2 and b2 and then calc W1, b1
+
+        h = sigmoid(np.dot(x, W1) + b1)
+        y_hat = softmax(np.dot(h, W2) + b2)
+
+        gradW2[i] = np.dot(h.reshape(-1, 1), y_hat-y)    # input: y (1xDy), h (1xDh). output: Dh x Dy
+        gradb2[i] = y_hat - y                                # b2 (1xDy)
+        gradW1[i] = np.dot()
+        gradb1[i] = np.dot()
+
     ### END YOUR CODE
 
     ### Stack gradients (do not modify)
