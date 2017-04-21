@@ -54,7 +54,7 @@ def evaluate_ngrams(eval_dataset, trigram_counts, bigram_counts, unigram_counts,
     perplexity = 0
     l = 0
     test_token_count = 0
-    lambda3 = 1. - lambda1 - lambda2
+    lambda3 = round(1. - lambda1 - lambda2, 2)  # Avoids floating point inaccuracies
     for seq in eval_dataset:
         for i in range(2, len(seq)):
             curr, prev, prevprev = seq[i], seq[i - 1], seq[i - 2]
@@ -71,11 +71,10 @@ def evaluate_ngrams(eval_dataset, trigram_counts, bigram_counts, unigram_counts,
             uni_prob = float(unigram_counts.get(curr, 0)) / train_token_count
 
             p_seq = (lambda1 * tri_prob) + (lambda2 * bi_prob) + (lambda3 * uni_prob)
-            try:
-                l += np.log2(p_seq)
-                test_token_count += 1
-            except RuntimeError:
-                pass
+            if p_seq == 0:
+                return float("inf")
+            l += np.log2(p_seq)
+            test_token_count += 1
 
     l = float(l) / test_token_count
     perplexity += 2 ** (-l)
@@ -84,14 +83,32 @@ def evaluate_ngrams(eval_dataset, trigram_counts, bigram_counts, unigram_counts,
 
 
 def grid_search_lambdas(trigram_counts, bigram_counts, unigram_counts, token_count):
-    perplexities = np.zeros(shape=(100, 100))
-    for i, lambda1 in enumerate(np.arange(0, 1, 0.01)):
-        for j, lambda2 in enumerate(np.arange(0, 1, 0.01)):
-            perplexities[i][j] = evaluate_ngrams(
+    perplexities = np.zeros(shape=(101, 101))
+    iter_counter = 0
+    opt_perplexity = float("inf")
+    opt_lambda1 = 0
+    opt_lambda2 = 0
+    for lambda1 in np.arange(0, 1.01, 0.01):
+        for lambda2 in np.arange(0, 1.01-lambda1, 0.01):
+            perplexity = evaluate_ngrams(
                 S_dev, trigram_counts, bigram_counts, unigram_counts, token_count, lambda1, lambda2)
+            if perplexity < opt_perplexity:
+                opt_perplexity = perplexity
+                opt_lambda1 = lambda1
+                opt_lambda2 = lambda2
+                print("Reached new low! : " + str(perplexity))
 
-    min_i, min_j = np.unravel_index(perplexities.argmin(), perplexities.shape)
-    return "min lambda1: " + np.arange(0, 1, 0.01)[min_i] + " min lambda2: " + np.arange(0, 1, 0.01)[min_j]
+            print(str(iter_counter) + ", for lambda1 = " + str(lambda1) +
+                  ", lambda2 = " + str(lambda2) +
+                  ", lambda3 = " + str(round(1.-lambda1-lambda2, 2)) +
+                    ", perplexity is " + str(perplexity))
+            iter_counter += 1
+
+    opt_lambda_3 = 1 - opt_lambda1 - opt_lambda2
+    print "best lambda1: " + str(opt_lambda1) +\
+           " best lambda2: " + str(opt_lambda2) +\
+           " best lambda3: " + str(opt_lambda_3) +\
+            " perplexity: " + str(opt_perplexity)
 
 
 def test_ngram():
@@ -104,9 +121,10 @@ def test_ngram():
     print "#bigrams: " + str(len(bigram_counts))
     print "#unigrams: " + str(len(unigram_counts))
     print "#tokens: " + str(token_count)
-    perplexity = evaluate_ngrams(S_dev, trigram_counts, bigram_counts, unigram_counts, token_count, 0.5, 0.4)
-    grid_search_lambdas(trigram_counts, bigram_counts, unigram_counts, token_count)
+    perplexity = evaluate_ngrams(S_dev, trigram_counts, bigram_counts, unigram_counts, token_count, 0.37, 0.5)
     print "#perplexity: " + str(perplexity)
+    grid_search_lambdas(trigram_counts, bigram_counts, unigram_counts, token_count)
+
     ### YOUR CODE HERE
     ### END YOUR CODE
 
