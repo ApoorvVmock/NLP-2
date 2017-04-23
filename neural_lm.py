@@ -99,7 +99,16 @@ def eval_neural_lm(eval_data_path):
 
     perplexity = 0
     ### YOUR CODE HERE
-    # raise NotImplementedError
+    l = test_token_count = 0
+    for i in range(num_of_examples):
+        data, label = num_to_word_embedding[in_word_index[i]], int_to_one_hot([out_word_index[i]], output_dim)
+        p_seq = forward(data, label, params, dimensions)
+        if p_seq == 0:
+            return float("inf")
+        l += np.log2(p_seq)
+        test_token_count += 1
+    l = float(l) / test_token_count
+    perplexity += 2 ** (-l)
     ### END YOUR CODE
 
     return perplexity

@@ -32,7 +32,7 @@ def forward(data, label, params, dimensions):
     y_hat = softmax(np.dot(h, W2) + b2)
 
     # return y_hat[label]
-    return np.max(np.multiply(y_hat, label), axis=1).reshape(1, len(data))
+    return np.max(np.multiply(y_hat, label), axis=1)
 
 def forward_backward_prop(data, labels, params, dimensions):
     """

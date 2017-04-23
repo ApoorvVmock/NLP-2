@@ -83,7 +83,6 @@ def evaluate_ngrams(eval_dataset, trigram_counts, bigram_counts, unigram_counts,
 
 
 def grid_search_lambdas(trigram_counts, bigram_counts, unigram_counts, token_count):
-    perplexities = np.zeros(shape=(101, 101))
     iter_counter = 0
     opt_perplexity = float("inf")
     opt_lambda1 = 0
