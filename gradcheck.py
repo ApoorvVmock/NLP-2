@@ -37,7 +37,7 @@ def gradcheck_naive(f, x):
         fx_minus_h, _ = f(x)
         x[ix] = old_value
 
-        numgrad = (fx_plus_h - fx_minus_h) / (2*h)
+        numgrad = sum((fx_plus_h - fx_minus_h) / (2*h))
 
         # Compare gradients
         reldiff = abs(numgrad - grad[ix]) / max(1, abs(numgrad), abs(grad[ix]))

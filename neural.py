@@ -31,7 +31,8 @@ def forward(data, label, params, dimensions):
     h = sigmoid(np.dot(data, W1) + b1)
     y_hat = softmax(np.dot(h, W2) + b2)
 
-    return y_hat[label]
+    # return y_hat[label]
+    return np.max(np.multiply(y_hat, label), axis=1).reshape(1, len(data))
 
 def forward_backward_prop(data, labels, params, dimensions):
     """
@@ -60,31 +61,17 @@ def forward_backward_prop(data, labels, params, dimensions):
     ofs += H * Dy
     b2 = np.reshape(params[ofs:ofs + Dy], (1, Dy))
 
-    gradW1 = np.zeros(shape = (len(data), Dy, H)) #todo: shape = M x Dy x H ?
-    gradW2 = np.zeros(shape = (len(data), H, Dx))
-    gradb1 = np.zeros(shape = (len(data), Dy, 1))
-    gradb2 = np.zeros(shape = (len(data), Dy, 1))
+    cost = np.sum(-np.log(forward(data, labels, params, dimensions)))
 
+    h = sigmoid(np.dot(data, W1) + b1)
+    y_hat = softmax(np.dot(h, W2) + b2)
 
-    for i in range(len(data)):
-        x, y = data[i], labels[i]
-    ### YOUR CODE HERE: forward propagation
-    # For all examples, we calculate accumulated errors (the cost is actually the sum of -log(forward...)
-        error = -np.log(forward(x, y, params, dimensions))
-    ### END YOUR CODE
-
-    ### YOUR CODE HERE: backward propagation
-    # for each layer, accumulate the gradients w.r.t Weights or bias vectors. begin with W2 and b2 and then calc W1, b1
-
-        h = sigmoid(np.dot(x, W1) + b1)
-        y_hat = softmax(np.dot(h, W2) + b2)
-
-        gradW2[i] = np.dot(h.reshape(-1, 1), y_hat-y)    # input: y (1xDy), h (1xDh). output: Dh x Dy
-        gradb2[i] = y_hat - y                                # b2 (1xDy)
-        gradW1[i] = np.dot()
-        gradb1[i] = np.dot()
-
-    ### END YOUR CODE
+    grad_CE = np.subtract(y_hat, labels)
+    grad_sigmoid = np.multiply(h, np.subtract(1, h))
+    gradW2 = np.dot(h.transpose(), grad_CE)
+    gradb2 = np.sum(grad_CE, axis=0)
+    gradW1 = np.dot(data.transpose(), np.multiply(np.dot(grad_CE, W2.transpose()), grad_sigmoid))
+    gradb1 = np.sum(np.multiply(np.dot(grad_CE, W2.transpose()), grad_sigmoid), axis=0)
 
     ### Stack gradients (do not modify)
     grad = np.concatenate((gradW1.flatten(), gradb1.flatten(),
